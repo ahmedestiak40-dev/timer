@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Productivity Timer</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: "Poppins", sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: linear-gradient(135deg, #4facfe, #00f2fe);
+      color: #fff;
+      transition: background 1s ease;
+    }
+
+    .container {
+      background: rgba(255, 255, 255, 0.15);
+      padding: 2rem;
+      border-radius: 25px;
+      text-align: center;
+      width: 340px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 1.2rem;
+    }
+
+    .mode {
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      font-weight: bold;
+      opacity: 0.9;
+    }
+
+    .timer {
+      position: relative;
+      width: 200px;
+      height: 200px;
+      margin: 0 auto 1.5rem;
+    }
+
+    svg {
+      transform: rotate(-90deg);
+    }
+
+    circle {
+      fill: none;
+      stroke-width: 10;
+      stroke-linecap: round;
+    }
+
+    .bg {
+      stroke: rgba(255, 255, 255, 0.2);
+    }
+
+    .progress {
+      stroke: #00ffb3;
+      stroke-dasharray: 628;
+      stroke-dashoffset: 0;
+      transition: stroke-dashoffset 1s linear;
+    }
+
+    .time {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 2.3rem;
+      font-weight: bold;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 1rem;
+    }
+
+    button {
+      background: #00ffb3;
+      border: none;
+      color: #000;
+      padding: 0.6rem 1rem;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background: #00cc8f;
+    }
+
+    .set-time {
+      margin-top: 1.2rem;
+    }
+
+    input {
+      width: 70px;
+      padding: 0.4rem;
+      border: none;
+      border-radius: 6px;
+      text-align: center;
+      margin-right: 0.5rem;
+      font-size: 1rem;
+    }
+
+    .break-mode {
+      background: linear-gradient(135deg, #43e97b, #38f9d7);
+    }
+
+    .work-mode {
+      background: linear-gradient(135deg, #4facfe, #00f2fe);
+    }
+  </style>
+</head>
+<body class="work-mode">
+
+  <div class="container">
+    <h1>Productivity Timer</h1>
+    <div class="mode" id="mode">Work Session</div>
+    <div class="timer">
+      <svg width="200" height="200">
+        <circle class="bg" cx="100" cy="100" r="100"></circle>
+        <circle class="progress" cx="100" cy="100" r="100"></circle>
+      </svg>
+      <div class="time" id="time">25:00</div>
+    </div>
+
+    <div class="controls">
+      <button id="start">Start</button>
+      <button id="pause">Pause</button>
+      <button id="reset">Reset</button>
+    </div>
+
+    <div class="set-time">
+      <input type="number" id="minutesInput" min="1" max="60" placeholder="25" />
+      <button id="setTime">Set</button>
+    </div>
+  </div>
+
+  <audio id="startSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_2a2a6c36b8.mp3?filename=button-click-153941.mp3"></audio>
+  <audio id="pauseSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_4e9e3d4d6b.mp3?filename=click-124467.mp3"></audio>
+  <audio id="endSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_1eb7cc5a02.mp3?filename=notification-143106.mp3"></audio>
+
+  <script>
+    const timeDisplay = document.getElementById("time");
+    const startBtn = document.getElementById("start");
+    const pauseBtn = document.getElementById("pause");
+    const resetBtn = document.getElementById("reset");
+    const setTimeBtn = document.getElementById("setTime");
+    const minutesInput = document.getElementById("minutesInput");
+    const progressCircle = document.querySelector(".progress");
+    const modeText = document.getElementById("mode");
+    const body = document.body;
+
+    const startSound = document.getElementById("startSound");
+    const pauseSound = document.getElementById("pauseSound");
+    const endSound = document.getElementById("endSound");
+
+    let timer;
+    let totalTime = 25 * 60;
+    let timeLeft = totalTime;
+    let isRunning = false;
+    let isWorkSession = true;
+
+    const circleLength = 2 * Math.PI * 100;
+
+    function updateDisplay() {
+      const minutes = Math.floor(timeLeft / 60);
+      const seconds = timeLeft % 60;
+      timeDisplay.textContent = 
+        `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      
+      const progress = (timeLeft / totalTime) * circleLength;
+      progressCircle.style.strokeDashoffset = circleLength - progress;
+    }
+
+    function startTimer() {
+      if (isRunning) return;
+      isRunning = true;
+      startSound.play();
+      timer = setInterval(() => {
+        if (timeLeft > 0) {
+          timeLeft--;
+          updateDisplay();
+        } else {
+          clearInterval(timer);
+          isRunning = false;
+          endSound.play();
+          switchMode();
+        }
+      }, 1000);
+    }
+
+    function pauseTimer() {
+      clearInterval(timer);
+      isRunning = false;
+      pauseSound.play();
+    }
+
+    function resetTimer() {
+      clearInterval(timer);
+      isRunning = false;
+      timeLeft = totalTime;
+      updateDisplay();
+    }
+
+    function setNewTime() {
+      const newMinutes = parseInt(minutesInput.value);
+      if (!isNaN(newMinutes) && newMinutes > 0) {
+        totalTime = newMinutes * 60;
+        timeLeft = totalTime;
+        updateDisplay();
+      }
+    }
+
+    function switchMode() {
+      isWorkSession = !isWorkSession;
+      if (isWorkSession) {
+        modeText.textContent = "Work Session";
+        body.className = "work-mode";
+        totalTime = 25 * 60;
+      } else {
+        modeText.textContent = "Short Break ☕";
+        body.className = "break-mode";
+        totalTime = 5 * 60;
+      }
+      timeLeft = totalTime;
+      updateDisplay();
+      startTimer();
+    }
+
+    startBtn.addEventListener("click", startTimer);
+    pauseBtn.addEventListener("click", pauseTimer);
+    resetBtn.addEventListener("click", resetTimer);
+    setTimeBtn.addEventListener("click", setNewTime);
+
+    updateDisplay();
+  </script>
+
+</body>
+</html>
